@@ -10,7 +10,6 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
         exit(0);
     }
     unsigned long input;
-    char *endp = NULL;
     unsigned int ins, rs, rt, rd, out, skip = 0;
     signed char imm = 0;
 
@@ -19,23 +18,6 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
     //Open the file for reading
     FILE *trace_file = fopen(argv[1], "r");
     char buff[255];
-
-    /*fgets(buff, 255, (FILE*)trace_file);
-
-    printf("First line: %s", buff);
-
-
-
-    input = strtoul(buff, &endp, 2);
-    if(endp != NULL && endp != '\0'){
-        printf("converted binary '%s' to integer %lu\n",buff, input);
-    }
-
-    fgets(buff, 255, (FILE*)trace_file);
-    printf("Second Line: %s", buff);
-    */
-
-    //fread(instruction, sizeof(instruction),1,trace_file);
 
     /* This file will only contain lines with instructions written in binary format, one instruction per line.
      * Once the file is open for reading, each line will be parsed to find the INS, REG, IMM, and J fields
@@ -80,7 +62,7 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
     if(trace_file){
         while(fgets(buff, 255, (FILE*)trace_file) != 0){
 
-            input = strtoul(buff, &endp, 2);
+            input = strtoul(buff, NULL, 2);
 //            if(endp != NULL && endp != '\0'){
 //                printf("converted binary '%s' to integer %lu\n",buff, input);
 //            }
@@ -88,7 +70,7 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
             ins = input >> 6;
             switch(ins){
             case 0: //li instruction, need rd and imm
-                rd = (input & 0b00110000) >> 6;
+                rd = (input & 0b00110000) >> 4;
                 imm = (input & 0b00001111);
                 if((imm & 0b00001000) == 0b00001000){
                     imm = imm | 0b11110000;
@@ -120,7 +102,7 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
                     printf("Value in $r%d is: %d\n", rd, regs[rd]);
                 }
                 else if(regs[rd] == regs[rs]){
-                    for(unsigned int i=0;i<skip;i++){
+                    for(unsigned int i=0;i<skip+1;i++){
                         fgets(buff, 255, (FILE*)trace_file);
                     }
                 }
@@ -129,9 +111,6 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
                 break;
             }
         }
-
-
-
 
         printf("Reached end of Program.\n");
         fclose(trace_file);
