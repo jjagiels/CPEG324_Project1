@@ -9,20 +9,32 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
         printf("%s <trace_file>\n", argv[0]);
         exit(0);
     }
-    unsigned char input[1];
-    long int pc = 0;
-    unsigned char ins, rs, rt, rd, out, skip = 0;
+    unsigned long input;
+    char *endp = NULL;
+    unsigned int ins, rs, rt, rd, out, skip = 0;
     signed char imm = 0;
 
-    signed char $r0 = 0;
-    signed char $r1 = 0;
-    signed char $r2 = 0;
-    signed char $r3 = 0;
-
-    signed char regs[4] = {$r0,$r1,$r2,$r3};
+    signed char regs[4] = {0,0,0,0};
 
     //Open the file for reading
-    FILE *trace_file = fopen(argv[1], "rb");
+    FILE *trace_file = fopen(argv[1], "r");
+    char buff[255];
+
+    /*fgets(buff, 255, (FILE*)trace_file);
+
+    printf("First line: %s", buff);
+
+
+
+    input = strtoul(buff, &endp, 2);
+    if(endp != NULL && endp != '\0'){
+        printf("converted binary '%s' to integer %lu\n",buff, input);
+    }
+
+    fgets(buff, 255, (FILE*)trace_file);
+    printf("Second Line: %s", buff);
+    */
+
     //fread(instruction, sizeof(instruction),1,trace_file);
 
     /* This file will only contain lines with instructions written in binary format, one instruction per line.
@@ -35,7 +47,7 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
      *
      * Example: If a line looks like '00001000', then the instruction can be broken up like:
      *
-     * 00   00  1110
+     * 00   00  1111
      * ^    ^     ^
      * |    |     |
      * INS  REG   IMM
@@ -65,64 +77,65 @@ int main(int argc, char *argv[]){ //program will recieve a file input that has c
      *
      * */
 
-printf("Value in $r%d is: %d\n", rd, regs[rd]);
     if(trace_file){
-        while(!feof(trace_file)){
+        while(fgets(buff, 255, (FILE*)trace_file) != 0){
 
-            //fseek(trace_file,pc,SEEK_SET);
-            fread(&input, sizeof(input),1,trace_file);
+            input = strtoul(buff, &endp, 2);
+//            if(endp != NULL && endp != '\0'){
+//                printf("converted binary '%s' to integer %lu\n",buff, input);
+//            }
 
-            ins = input[0] >> 6;
+            ins = input >> 6;
             switch(ins){
             case 0: //li instruction, need rd and imm
-                rd = (input[0] << 2) >> 6;
-                imm = (input[0] << 4) >> 4;
-                if((imm & 8) == 8){
-                    imm = imm | 240;
+                rd = (input & 0b00110000) >> 6;
+                imm = (input & 0b00001111);
+                if((imm & 0b00001000) == 0b00001000){
+                    imm = imm | 0b11110000;
                 }
                 regs[rd] = imm;
 
                 break;
             case 1: //add instruction, need rd, rs, and rt
-                rd = (input[0] << 2) >> 6;
-                rs = (input[0] << 4) >> 6;
-                rt = (input[0] << 6) >> 6;
+                rd = (input & 0b00110000) >> 4;
+                rs = (input & 0b00001100) >> 2;
+                rt = (input & 0b00000011);
 
                 regs[rd] = regs[rs] + regs[rt];
                 break;
             case 2: //sub instruction, need rd, rs, and rt
-                rd = (input[0] << 2) >> 6;
-                rs = (input[0] << 4) >> 6;
-                rt = (input[0] << 6) >> 6;
+                rd = (input & 0b00110000) >> 4;
+                rs = (input & 0b00001100) >> 2;
+                rt = (input & 0b00000011);
 
                 regs[rd] = regs[rs] - regs[rt];
                 break;
             case 3: //beq and output, need rd, rs, skip, and out
-                rd = (input[0] << 2) >> 6;
-                rs = (input[0] << 4) >> 6;
-                skip = (input[0] << 6) >> 7;
-                out = input[0] & 1;
+                rd = (input & 0b00110000) >> 4;
+                rs = (input & 0b00001100) >> 2;
+                skip = (input & 0b00000010) >> 1;
+                out = input & 1;
 
                 if(out){
-                    printf("Value in $r%d is: %d", rd, regs[rd]);
+                    printf("Value in $r%d is: %d\n", rd, regs[rd]);
                 }
-
-                if(regs[rd] == regs[rs]){
-                    pc += (skip+1);
+                else if(regs[rd] == regs[rs]){
+                    for(unsigned int i=0;i<skip;i++){
+                        fgets(buff, 255, (FILE*)trace_file);
+                    }
                 }
                 break;
             default:
                 break;
             }
-
-            pc++;
         }
 
 
 
 
-        printf("Reached end of While loop.\n");
+        printf("Reached end of Program.\n");
         fclose(trace_file);
     }
+
     return 0;
 }
